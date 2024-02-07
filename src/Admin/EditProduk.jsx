@@ -9,6 +9,8 @@ const EditProduk = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const [imagePreview, setImagePreview] = useState("");
+
   const [produk, setProduk] = useState({
     nama_produk: "",
     jenis_produk: "",
@@ -44,8 +46,18 @@ const EditProduk = () => {
   };
 
   const handleImage = (e) => {
+    // const file = e.target.files[0];
+    // setImageUpload(file);
     const file = e.target.files[0];
     setImageUpload(file);
+    console.log(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -54,16 +66,33 @@ const EditProduk = () => {
     try {
       const filename = `${uuidv4(imageUpload.name)}`;
 
-      const { data: deleteImage } = await supabase.storage
-        .from("image_produk")
-        .remove([`image/${produk.images}`]);
+      if (imageUpload.length === 0) {
+        const { error } = await supabase
+          .from("produk")
+          .update({
+            nama_produk: produk.nama_produk,
+            jenis_produk: produk.jenis_produk,
+            jumlah_produk: produk.jumlah_produk,
+            harga: produk.harga,
+            deskripsi: produk.deskripsi,
+            images: produk.images,
+          })
+          .eq("id", id);
 
-      if (deleteImage) {
+        if (!error) {
+          alert("Update Produk Berhasil");
+          navigate("/admin");
+        }
+      } else {
+        // const { data: deleteImage } = await supabase.storage
+        //   .from("image_produk")
+        //   .remove([`image/${produk.images}`]);
+
         const { data: updateData } = await supabase.storage
           .from("image_produk")
           .upload(`image/${filename}`, imageUpload, {
             cacheControl: "3600",
-            upsert: false,
+            upsert: true,
           });
 
         if (updateData) {
@@ -175,12 +204,21 @@ const EditProduk = () => {
               />
             </div>
 
-            <img
-              src={`https://bizsemnsdyashsoywdxt.supabase.co/storage/v1/object/public/image_produk/image/${produk.images}`}
-              alt=""
-              width={200}
-              className="my-5"
-            />
+            {imagePreview ? (
+              <img
+                src={imagePreview}
+                alt="Uploaded"
+                className="w-24 object-cover"
+              />
+            ) : (
+              <>
+                <img
+                  src={`https://bizsemnsdyashsoywdxt.supabase.co/storage/v1/object/public/image_produk/image/${produk.images}`}
+                  alt=""
+                  className="w-24 object-cover"
+                />
+              </>
+            )}
 
             <div className="flex gap-2">
               <Link
